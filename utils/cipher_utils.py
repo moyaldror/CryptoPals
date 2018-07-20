@@ -9,9 +9,10 @@ from utils.pkcs7 import pad, unpad
 default_aes_block_size = 16
 
 
-def detect_ecb_line(cipher_text):
+def detect_ecb_line(cipher_text, block_size=default_aes_block_size):
     '''
     :param cipher_text: hexdecimal bytes string or string
+    :param block_size: block size used
     :return: number of unique blocks, line number and the cipher it self as a tuple
     '''
     min_unique_blocks = maxsize
@@ -21,12 +22,15 @@ def detect_ecb_line(cipher_text):
     for line_number, cipher in enumerate(cipher_text):
         if isinstance(cipher, bytes):
             cipher = cipher.decode('utf-8')
-        unique_blocks = len(set(get_blocks(arr=hex_to_bytes(cipher.strip()), block_size=default_aes_block_size)))
+
+        unique_blocks = len(set(get_blocks(arr=hex_to_bytes(cipher.strip()), block_size=block_size)))
         if unique_blocks < min_unique_blocks:
             min_unique_blocks = unique_blocks
             cipher_res = bytes(cipher.strip(), 'utf-8')
             cipher_line = line_number + 1
 
+    min_unique_blocks = min_unique_blocks if min_unique_blocks < len(
+        list(get_blocks(arr=hex_to_bytes(cipher_res), block_size=block_size))) else None
     return min_unique_blocks, cipher_line, cipher_res
 
 

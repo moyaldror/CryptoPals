@@ -1,8 +1,10 @@
 from operator import itemgetter
+from random import _urandom, randint
 
 from utils.arrays_utils import get_blocks
 from utils.hex_utils import hex_to_bytes, bytes_to_hex, xor_strings, hamming_distance
 from utils.misc import CONSTANTS
+from utils.oracles import detect_ecb_or_cbc, random_key_ecb_enc_dec
 
 
 def count_printables(src_str):
@@ -77,10 +79,63 @@ def repeated_key_xor_breaker(cipher_text):
     return hex_to_bytes(repeated_key_xor(plain_text=hex_to_bytes(cipher_text), key=bytes(key))), bytes(key)
 
 
+def find_block_size(enc_func):
+    # each time pre append what you think will be 3 blocks to find duplicated cipher blocks
+    preappended_bytes = b'A'*8*3
+    block_size = len(preappended_bytes) // 3
+
+    while detect_ecb_or_cbc(cipher_text=enc_func(plain_text=preappended_bytes),
+                            block_size=block_size) != 'AES ECB' and block_size < 1024:
+        # block sizes are: 8, 16, 32, 64 ...
+        preappended_bytes *= 2
+        block_size = len(preappended_bytes) // 3
+
+    return block_size
+
+
+def byte_byte_ecb_break(unknown_str, hard=False):
+    '''
+    :param unknown_str: unknown string we want to break as bytes string
+    :param hard: if this hard ECB decryption
+    :return: the discoverd string as bytes string
+    '''
+    prefix_text = b'' if not hard else _urandom(randint(0, 100))
+    enc, dec = random_key_ecb_enc_dec(prefix_text, unknown_str)
+
+    def single_block_break(block):
+        discovered = b''
+
+        for i in range(len(block) - 1, -1, -1):
+            prepad = b'A' * i
+            expected_cipher = enc(plain_text=b''.join([prepad, block])[:len(block)])
+
+            for c in range(256):
+                test = prepad + discovered + bytes([c])
+
+                if enc(plain_text=test) == expected_cipher:
+                    discovered += bytes([c])
+                    break
+
+        return discovered
+
+    res = b''
+    for block in get_blocks(arr=unknown_str, block_size=find_block_size(enc_func=enc)):
+        res += single_block_break(block=block)
+
+    return res
+
+
 if __name__ == '__main__':
     str_to_break = '1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736'
     print(single_byte_xor_breaker(str_to_break))
     str_to_encrypt = b'Burning \'em, if you ain\'t quick and nimble\nI go crazy when I hear a cymbal'*100
     key = b'ICE'
     print(repeated_key_xor_breaker(cipher_text=repeated_key_xor(plain_text=str_to_encrypt, key=key))[:len(str_to_encrypt)//100])
-    assert(repeated_key_xor_breaker(cipher_text=repeated_key_xor(plain_text=str_to_encrypt, key=key)) == str_to_encrypt)
+    assert(repeated_key_xor_breaker(cipher_text=repeated_key_xor(plain_text=str_to_encrypt, key=key))[0] == str_to_encrypt)
+
+    to_find = b'dror'*5
+    print(byte_byte_ecb_break(unknown_str=to_find))
+    assert(byte_byte_ecb_break(unknown_str=to_find) == to_find)
+
+    print(byte_byte_ecb_break(unknown_str=to_find, hard=True))
+    assert(byte_byte_ecb_break(unknown_str=to_find, hard=True) == to_find)

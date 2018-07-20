@@ -1,9 +1,11 @@
 from codecs import encode
-from utils import detect_ecb_line, encrypt_ecb
+
 from resources import RESOURCES_PATH
+from utils import detect_ecb_line, encrypt_ecb
 
 with open(RESOURCES_PATH + '8.txt', 'r') as f:
     lines = f.readlines()
+
 
 print(detect_ecb_line(cipher_text=lines))
 data_to_enc = b'a'*16*16
