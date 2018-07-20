@@ -1,7 +1,7 @@
-from codecs import decode, encode
 from operator import itemgetter
-from utils.hex_utils import hex_to_bytes, xor_strings, hamming_distance
+
 from utils.arrays_utils import get_blocks
+from utils.hex_utils import hex_to_bytes, bytes_to_hex, xor_strings, hamming_distance
 from utils.misc import CONSTANTS
 
 
@@ -30,11 +30,11 @@ def single_byte_xor_breaker(hex_str):
     for i in range(256):
         temp_str = bytes([i])*len(hex_bytes)
 
-        dec_printables = count_printables(decode(xor_strings(temp_str, hex_bytes), 'hex'))
+        dec_printables = count_printables(xor_strings(temp_str, hex_bytes))
         if dec_printables > max_printables:
             max_printables, key_byte = dec_printables, i
 
-    return decode(xor_strings(bytes([key_byte]) * len(hex_bytes), hex_bytes), 'hex'), key_byte, max_printables
+    return xor_strings(bytes([key_byte]) * len(hex_bytes), hex_bytes), key_byte, max_printables
 
 
 def repeated_key_xor(plain_text, key):
@@ -46,7 +46,7 @@ def repeated_key_xor(plain_text, key):
     def build_repeated_xor_key(key, plain_text_len):
         return b''.join([key] * ((plain_text_len // len(key)) + (plain_text_len % len(key))))
 
-    return xor_strings(plain_text, build_repeated_xor_key(key=key, plain_text_len=len(plain_text)))
+    return bytes_to_hex(xor_strings(plain_text, build_repeated_xor_key(key=key, plain_text_len=len(plain_text))))
 
 
 def repeated_key_xor_breaker(cipher_text):
@@ -72,7 +72,7 @@ def repeated_key_xor_breaker(cipher_text):
               if len(block) == key_size]
 
     for block in zip(*blocks):
-        key.append(single_byte_xor_breaker(encode(bytes([x for x in block]), 'hex'))[1])
+        key.append(single_byte_xor_breaker(bytes_to_hex(bytes([x for x in block])))[1])
 
     return hex_to_bytes(repeated_key_xor(plain_text=hex_to_bytes(cipher_text), key=bytes(key))), bytes(key)
 

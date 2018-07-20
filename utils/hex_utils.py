@@ -9,6 +9,13 @@ def hex_to_bytes(hex_str):
     '''
     return decode(hex_str, 'hex')
 
+def bytes_to_hex(bytes_str):
+    '''
+    :param bytes_str: bytes string
+    :return: bytes string hex encoded
+    '''
+    return encode(bytes_str, 'hex')
+
 
 def hex_byte_to_bin(hex_byte):
     '''
@@ -49,7 +56,7 @@ def xor_strings(*args):
 
         ret += bytes([res])
 
-    return encode(ret, 'hex')
+    return ret
 
 
 def hamming_distance(str1, str2):
@@ -58,7 +65,7 @@ def hamming_distance(str1, str2):
     :param str2: second string
     :return: the hamming distance between the strings (compute against the shortest string)
     '''
-    return Counter(''.join([hex_byte_to_bin(b) for b in hex_to_bytes(xor_strings(str1, str2))]))['1']
+    return Counter(''.join([hex_byte_to_bin(b) for b in xor_strings(str1, str2)]))['1']
 
 
 if __name__ == '__main__':

@@ -1,9 +1,10 @@
-from Crypto.Cipher import AES
-from utils.arrays_utils import get_blocks
-from utils.hex_utils import hex_to_bytes, xor_strings
-from utils.pkcs7 import pad, unpad
 from sys import maxsize
 
+from Crypto.Cipher import AES
+
+from utils.arrays_utils import get_blocks
+from utils.hex_utils import hex_to_bytes, bytes_to_hex, xor_strings
+from utils.pkcs7 import pad, unpad
 
 default_aes_block_size = 16
 
@@ -79,7 +80,7 @@ class AesCbc(object):
         plain = []
         iv = self.__iv
         for block in get_blocks(arr=cipher_text, block_size=AES.block_size):
-            plain.append(hex_to_bytes(xor_strings(iv, self.__block_decrypt_ecb(cipher_text=block))))
+            plain.append(xor_strings(iv, self.__block_decrypt_ecb(cipher_text=block)))
             iv = block
 
         plain[len(plain) - 1] = unpad(data=plain[len(plain) - 1])
@@ -90,3 +91,29 @@ class AesCbc(object):
 
     def __str__(self):
         return 'AES CBC'
+
+
+if __name__ == '__main__':
+    key = b'dror'*4
+    iv = b'dror'*4
+    plain_text = b'aaaaaaaaaaaa siveniaaaaaaaaa'
+    expected_ecb = b'C9063CF85320C0B0972A5954403102A2B5A0F54E89BE13977ADF0E6EF28BAC9B'.lower()
+    expected_cbc = b'03FC6831FA9BDBBA90C794D80DBF3A5B0AEE111B9396495BADD1AEC2A8F215FF'.lower()
+
+    aes_ecb = AesEcb(key=key, iv=iv)
+    aes_cbc = AesCbc(key=key, iv=iv)
+
+    ecb_encrypted = aes_ecb.encrypt(plain_text=plain_text)
+    cbc_encrypted = aes_cbc.encrypt(plain_text=plain_text)
+    ecb_decrypted = aes_ecb.decrypt(cipher_text=ecb_encrypted)
+    cbc_decrypted = aes_cbc.decrypt(cipher_text=cbc_encrypted)
+
+    print(bytes_to_hex(ecb_encrypted))
+    print(bytes_to_hex(cbc_encrypted))
+    print(ecb_decrypted)
+    print(cbc_decrypted)
+
+    assert(bytes_to_hex(ecb_encrypted) == expected_ecb)
+    assert(bytes_to_hex(cbc_encrypted) == expected_cbc)
+    assert(ecb_decrypted == plain_text)
+    assert(cbc_decrypted == plain_text)
